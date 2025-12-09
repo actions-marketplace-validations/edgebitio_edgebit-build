@@ -24,11 +24,17 @@ inputs:
   image-tag:
     description: 'Docker-style image tag to associate with the SBOM (eg "foo/bar:latest")'
     required: false
+  repo-digest:
+    description: 'Docker-style repo digest (or comma-separated list) to associate with the SBOM (eg "sha256:b644fed873ce1e623023d72a7ec6de626a834861c8bc724ce8e19a5138a8386e")'
+    required: false
   component:
     description: 'EdgeBit Component name to associate the SBOM with'
-    required: false
+    required: true
   tags:
     description: 'Comma-separated list of Component tags to apply to the SBOM'
+    required: false
+  commit-sha:
+    description: 'Commit SHA to associate with the SBOM.'
     required: false
   pr-number:
     description: 'Pull Request number on which to comment'
@@ -46,5 +52,5 @@ branding:
   icon: zap
   color: blue
 runs:
-  using: "node16"
+  using: "node20"
   main: "dist/index.js"

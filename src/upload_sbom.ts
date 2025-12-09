@@ -1,7 +1,5 @@
 import * as exec from '@actions/exec'
-import * as tc from '@actions/tool-cache'
-
-const ebctlVersion = 'v0.5.3'
+import { getCLI } from './cli'
 
 export type UploadSBOMParams = {
   sbomPath: string
@@ -9,22 +7,19 @@ export type UploadSBOMParams = {
   edgebitToken: string
   imageId?: string
   imageTag?: string
+  repoDigests: string[]
   sourceRepoUrl: string
   sourceCommitId: string
   baseCommitId?: string
-  componentName?: string
+  componentName: string
   tags: string[]
+  pullRequest?: string
 }
 
-export type UploadSBOMResult = {
-  commentBody: string
-  skipComment: boolean
-}
-
-export async function uploadSBOM(params: UploadSBOMParams): Promise<UploadSBOMResult> {
+export async function uploadSBOM(params: UploadSBOMParams) {
   const ebctl = await getCLI()
 
-  const args = ['upload-sbom-for-ci']
+  const args = ['upload-sbom']
 
   if (params.imageId) {
     args.push('--image-id', params.imageId)
@@ -34,9 +29,11 @@ export async function uploadSBOM(params: UploadSBOMParams): Promise<UploadSBOMRe
     args.push('--image-tag', params.imageTag)
   }
 
-  if (params.componentName) {
-    args.push('--component', params.componentName)
+  for (const digest of params.repoDigests) {
+    args.push('--repo-digest', digest)
   }
+
+  args.push('--component', params.componentName)
 
   for (const tag of params.tags) {
     args.push('--tag', tag)
@@ -45,8 +42,8 @@ export async function uploadSBOM(params: UploadSBOMParams): Promise<UploadSBOMRe
   args.push('--repo', params.sourceRepoUrl)
   args.push('--commit', params.sourceCommitId)
 
-  if (params.baseCommitId) {
-    args.push('--base-commit', params.baseCommitId)
+  if (params.pullRequest) {
+    args.push('--pull-request', params.pullRequest)
   }
 
   args.push(params.sbomPath)
@@ -61,20 +58,4 @@ export async function uploadSBOM(params: UploadSBOMParams): Promise<UploadSBOMRe
   if (output.exitCode !== 0) {
     throw new Error(`Failed to upload SBOM: ${output.stderr}`)
   }
-
-  const outputObj = JSON.parse(output.stdout)
-
-  return {
-    commentBody: outputObj['comment_body'],
-    skipComment: outputObj['skip_comment'],
-  }
-}
-
-export async function getCLI(): Promise<string> {
-  const archVal = process.arch === 'x64' ? 'x86_64' : 'arm64'
-  const toolURL = `https://github.com/edgebitio/edgebit-cli/releases/download/${ebctlVersion}/edgebit-cli_Linux_${archVal}.tar.gz`
-  const downloaded = await tc.downloadTool(toolURL)
-  const extracted = await tc.extractTar(downloaded)
-
-  return `${extracted}/ebctl`
 }
